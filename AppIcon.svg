@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="116" y1="78" x2="908" y2="946" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#17243B"/>
+      <stop offset="1" stop-color="#080C15"/>
+    </linearGradient>
+    <linearGradient id="line" x1="242" y1="716" x2="798" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5A8CFF"/>
+      <stop offset="1" stop-color="#49E596"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
+  </defs>
+  <rect x="52" y="52" width="920" height="920" rx="218" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="286" fill="none" stroke="#FFFFFF" stroke-opacity=".08" stroke-width="24"/>
+  <path d="M272 664C352 664 376 374 468 374C560 374 574 650 666 650C714 650 748 574 774 496"
+        fill="none" stroke="url(#line)" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"
+        opacity=".35" filter="url(#glow)"/>
+  <path d="M272 664C352 664 376 374 468 374C560 374 574 650 666 650C714 650 748 574 774 496"
+        fill="none" stroke="url(#line)" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="774" cy="496" r="52" fill="#49E596"/>
+  <circle cx="774" cy="496" r="22" fill="#E9FFF4"/>
+</svg>

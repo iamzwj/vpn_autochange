@@ -1,0 +1,9 @@
+# Swift compiler cache and locally built macOS app bundles
+module-cache/
+build/
+outputs/
+*.app
+*.dSYM/
+
+# macOS Finder metadata
+.DS_Store
