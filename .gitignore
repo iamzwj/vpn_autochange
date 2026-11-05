@@ -7,3 +7,6 @@ outputs/
 
 # macOS Finder metadata
 .DS_Store
+
+# Local connectivity measurements
+reports/

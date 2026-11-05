@@ -59,7 +59,7 @@ struct ControllerConfiguration: Sendable {
       address: controller,
       secret: secret,
       groupName: UserDefaults.standard.string(forKey: "groupName") ?? "Proxies",
-      unixSocket: unixSocket
+      unixSocket: FileManager.default.fileExists(atPath: "/var/run/clash-verge-service/users/\(getuid())/verge-mihomo.sock") ? "/var/run/clash-verge-service/users/\(getuid())/verge-mihomo.sock" : unixSocket
     )
   }
 
@@ -368,6 +368,12 @@ struct MihomoClient: Sendable {
     return data
   }
 
+  func nodeNames() async throws -> [String] {
+    let data = try await request(try encodedURL(segments: ["proxies"]))
+    let map = try JSONDecoder().decode(ProxyMapResponse.self, from: data).proxies
+    return map.filter { $0.value.all == nil && !["Direct", "Reject", "RejectDrop", "Pass", "Compatible", "Dns"].contains($0.value.type ?? "") }.keys.sorted()
+  }
+
   func group() async throws -> (name: String, value: ProxyGroupResponse) {
     let url = try encodedURL(segments: ["proxies"])
     let data = try await request(url)
@@ -401,13 +407,13 @@ struct MihomoClient: Sendable {
     let url = try encodedURL(
       segments: ["proxies", proxy, "delay"],
       query: [
-        URLQueryItem(name: "timeout", value: "2000"),
+        URLQueryItem(name: "timeout", value: "2800"),
         URLQueryItem(name: "url", value: "https://chatgpt.com/"),
       ]
     )
     let data = try await request(url)
     let result = try JSONDecoder().decode(DelayResponse.self, from: data)
-    guard result.delay > 0, result.delay <= 2_000 else {
+    guard result.delay > 0, result.delay <= 2_800 else {
       throw ControllerError.noHealthyNode
     }
     return result.delay
@@ -514,26 +520,77 @@ final class ProxyMonitor: ObservableObject {
 
   let failureThreshold = 1
   let checkIntervalSeconds = 3
-  let primaryNodeNames: Set<String> = [
-    "🇭🇰|香港-IEPL 02",
-    "🇲🇴|澳门-IEPL",
-    "🇯🇵 高级 专线 日本 10",
-    "🇺🇸 高级 专线 美国 15",
-  ]
-  let backupNodeNames: Set<String> = [
-    "🇳🇬|尼日利亚-IEPL 02",
-    "🇭🇰|香港-IEPL 01",
-    "🇭🇰|香港家宽-IEPL",
-    "🇭🇰 高级 专线 香港 01",
-    "🇸🇬 高级 专线 狮城 08",
-    "🇯🇵 高级 专线 日本 01",
-    "🇯🇵 高级 专线 日本 03",
-    "🇯🇵 高级 专线 日本 09",
-    "🇯🇵 高级 专线 日本 12",
-  ]
+  struct Sample: Codable { let name: String; let date: Date; let delay: Int? }
+  struct PoolNode: Identifiable {
+    var id: String { name }
+    let name: String; let successes: Int; let total: Int; let delay: Int?
+    var rate: Double { Double(successes) / Double(total) }
+  }
+  @Published var pool: [PoolNode] = []
+  @Published var scanStatus = "等待全量测试"
+  @Published var isScanning = false
+  private var samples: [Sample] = []
+  private var availableNames: Set<String> = []
+  private var scanTask: Task<Void, Never>?
+  private let historyURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("vpn_autochange/tests.jsonl")
+  var allPoolNodeNames: Set<String> { Set(pool.map(\.name)) }
 
-  var allPoolNodeNames: Set<String> {
-    primaryNodeNames.union(backupNodeNames)
+  private func rebuildPool() {
+    pool = Dictionary(grouping: samples, by: \.name).compactMap { name, rows in
+      guard availableNames.contains(name) else { return nil }
+      let good = rows.compactMap(\.delay)
+      guard !good.isEmpty else { return nil }
+      return PoolNode(name: name, successes: good.count, total: rows.count, delay: rows.last?.delay)
+    }.sorted {
+      if $0.rate != $1.rate { return $0.rate > $1.rate }
+      if $0.total != $1.total { return $0.total > $1.total }
+      return ($0.delay ?? Int.max, $0.name) < ($1.delay ?? Int.max, $1.name)
+    }.prefix(10).map { $0 }
+  }
+
+  func scanAll() async {
+    guard !isScanning else { return }
+    isScanning = true
+    defer { isScanning = false }
+    let client = MihomoClient(configuration: ControllerConfiguration.discover())
+    do {
+      let names = try await client.nodeNames()
+      availableNames = Set(names)
+      for start in stride(from: 0, to: names.count, by: 45) {
+        let batch = Array(names[start..<min(start + 45, names.count)])
+        let results = await withTaskGroup(of: Sample.self, returning: [Sample].self) { group in
+          for name in batch { group.addTask { Sample(name: name, date: Date(), delay: try? await client.delay(for: name)) } }
+          var rows: [Sample] = []
+          for await row in group { rows.append(row) }
+          return rows
+        }
+        try FileManager.default.createDirectory(at: historyURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if !FileManager.default.fileExists(atPath: historyURL.path) { FileManager.default.createFile(atPath: historyURL.path, contents: nil) }
+        let handle = try FileHandle(forWritingTo: historyURL)
+        defer { try? handle.close() }
+        try handle.seekToEnd()
+        for row in results {
+          var data = try JSONEncoder().encode(row); data.append(10)
+          try handle.write(contentsOf: data)
+          samples.append(row)
+        }
+        rebuildPool()
+        scanStatus = "全量测试 \(min(start + 45, names.count))/\(names.count) · 累计 \(samples.count) 条"
+      }
+    } catch { scanStatus = "全量测试失败：\(error.localizedDescription)" }
+  }
+
+  func selectNode(_ name: String) async {
+    guard !isChecking else { return }
+    isChecking = true
+    defer { isChecking = false }
+    do {
+      let client = MihomoClient(configuration: ControllerConfiguration.discover())
+      let group = try await client.group()
+      try await client.switchTo(name, in: group.name)
+      currentNode = name
+      statusMessage = "已手动切换到 \(name)"
+    } catch { statusMessage = error.localizedDescription }
   }
 
   private var configuration = ControllerConfiguration.discover()
@@ -542,6 +599,7 @@ final class ProxyMonitor: ObservableObject {
   private let reconnectRecordsKey = "aiProxyReconnectRecords"
 
   init() {
+    if let data = try? Data(contentsOf: historyURL) { samples = data.split(separator: 10).compactMap { try? JSONDecoder().decode(Sample.self, from: Data($0)) } }
     if
       let data = UserDefaults.standard.data(forKey: reconnectRecordsKey),
       let records = try? JSONDecoder().decode([ReconnectRecord].self, from: data)
@@ -587,11 +645,19 @@ final class ProxyMonitor: ObservableObject {
   func start() {
     guard monitorTask == nil else { return }
     requestNotificationPermission()
+    scanTask = Task { [weak self] in
+      while !Task.isCancelled {
+        await self?.scanAll()
+        try? await Task.sleep(for: .seconds(5))
+      }
+    }
     monitorTask = Task { [weak self] in
       guard let self else { return }
       while !Task.isCancelled {
+        let began = Date()
         await self.checkNow()
-        try? await Task.sleep(for: .seconds(self.checkIntervalSeconds))
+        let remaining = max(0.05, Double(self.checkIntervalSeconds) - Date().timeIntervalSince(began))
+        try? await Task.sleep(for: .seconds(remaining))
       }
     }
   }
@@ -663,30 +729,6 @@ final class ProxyMonitor: ObservableObject {
         throw ControllerError.missingGroup(resolvedGroup.name)
       }
       currentNode = node
-
-      let availableStableNodes = Set(group.all ?? []).intersection(allPoolNodeNames)
-      if autoProtection,
-        !allPoolNodeNames.contains(node),
-        !availableStableNodes.isEmpty
-      {
-        statusMessage = "订阅已变化，正在选择最快的稳定节点"
-        let candidate = try await bestCandidateWithBackup(
-          from: group.all ?? [],
-          excluding: nil,
-          client: client
-        )
-        try await client.switchTo(candidate.name, in: resolvedGroup.name)
-        currentNode = candidate.name
-        recordSuccess(delay: candidate.delay)
-        addReconnectRecord(
-          from: node,
-          to: candidate.name,
-          delay: candidate.delay,
-          succeeded: true
-        )
-        statusMessage = "已按当前订阅切换到最快稳定节点"
-        return
-      }
 
       do {
         let measuredDelay = try await client.delay(for: node)
@@ -784,16 +826,8 @@ final class ProxyMonitor: ObservableObject {
         succeeded: false
       )
       health = .warning
-      statusMessage = "主池和备选池全部失败，正在重新拉取订阅"
-      do {
-        let count = try await client.refreshProviders()
-        statusMessage = count > 0
-          ? "已刷新 \(count) 个订阅，稍后自动重试"
-          : "没有可刷新的远程订阅"
-      } catch {
-        health = .failed
-        statusMessage = "订阅刷新失败：\(error.localizedDescription)"
-      }
+      statusMessage = "前十节点暂不可用，等待全量检测更新"
+
     }
   }
 
@@ -865,20 +899,7 @@ final class ProxyMonitor: ObservableObject {
       results.append(contentsOf: batchResults)
     }
 
-    // Recheck the preliminary fastest candidates before switching. This
-    // prevents a single stale or abnormal measurement from winning.
-    let ranked = results.sorted(by: { $0.1 < $1.1 })
-    var verified: [(String, Int)] = []
-    for candidate in ranked {
-      if let delay = try? await client.delay(for: candidate.0) {
-        verified.append((candidate.0, delay))
-        if verified.count == 3 { break }
-      }
-    }
-
-    guard let best = verified.min(by: { $0.1 < $1.1 }) else {
-      throw ControllerError.noHealthyNode
-    }
+    guard let best = results.min(by: { $0.1 < $1.1 }) else { throw ControllerError.noHealthyNode }
     return (best.0, best.1)
   }
 
@@ -887,22 +908,8 @@ final class ProxyMonitor: ObservableObject {
     excluding current: String?,
     client: MihomoClient
   ) async throws -> (name: String, delay: Int, isBackup: Bool) {
-    if let primary = try? await bestCandidate(
-      from: all,
-      excluding: current,
-      client: client,
-      allowedNodeNames: primaryNodeNames
-    ) {
-      return (primary.name, primary.delay, false)
-    }
-
-    let backup = try await bestCandidate(
-      from: all,
-      excluding: current,
-      client: client,
-      allowedNodeNames: backupNodeNames
-    )
-    return (backup.name, backup.delay, true)
+    let best = try await bestCandidate(from: all, excluding: current, client: client, allowedNodeNames: allPoolNodeNames)
+    return (best.name, best.delay, false)
   }
 
   private func requestNotificationPermission() {
@@ -1091,25 +1098,27 @@ struct ContentView: View {
   }
 
   private var stablePoolSummary: some View {
-    VStack(alignment: .leading, spacing: 10) {
+    VStack(alignment: .leading, spacing: 8) {
       HStack {
-        Text("Codex 稳定节点池")
-          .font(.system(size: 13, weight: .semibold))
+        Text("长期稳定率前十 · 双击切换").font(.headline)
         Spacer()
-        Text("主池 \(monitor.primaryNodeNames.count) · 备选 \(monitor.backupNodeNames.count)")
-          .font(.system(size: 11))
-          .foregroundStyle(.tertiary)
+        Button("全量测试") { Task { await monitor.scanAll() } }.disabled(monitor.isScanning)
       }
-
-      Text("优先使用主池；主池全部失败时自动启用二级备选池")
-        .font(.system(size: 12))
-        .foregroundStyle(.secondary)
-    }
-    .padding(15)
-    .background(
-      RoundedRectangle(cornerRadius: 15, style: .continuous)
-        .fill(Color.primary.opacity(0.045))
-    )
+      Text(monitor.scanStatus).font(.caption).foregroundStyle(.secondary)
+      ForEach(monitor.pool) { node in
+        HStack {
+          Text(node.name).lineLimit(1)
+          Spacer()
+          Text(String(format: "%.1f%%", node.rate * 100))
+          Text("\(node.successes)/\(node.total)").foregroundStyle(.secondary)
+          Text(node.delay.map { "\($0) ms" } ?? "失败")
+        }
+        .font(.system(size: 11)).padding(5)
+        .background(node.name == monitor.currentNode ? Color.blue.opacity(0.25) : Color.clear)
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) { Task { await monitor.selectNode(node.name) } }
+      }
+    }.padding(15)
   }
 
   private var metrics: some View {
