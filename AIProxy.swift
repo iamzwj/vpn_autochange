@@ -403,25 +403,67 @@ struct MihomoClient: Sendable {
     throw ControllerError.missingGroup(configuration.groupName)
   }
 
+  // These unauthenticated probes verify service reachability, not an authenticated chat.
   func delay(for proxy: String) async throws -> Int {
-    let url = try encodedURL(
-      segments: ["proxies", proxy, "delay"],
-      query: [
-        URLQueryItem(name: "timeout", value: "2800"),
-        URLQueryItem(name: "url", value: "https://chatgpt.com/"),
-      ]
-    )
+    async let api = probe(proxy, url: "https://chatgpt.com/backend-api/models", expected: "401")
+    async let socket = probe(proxy, url: "https://ws.chatgpt.com/", expected: "404")
+    return try await max(api, socket)
+  }
+
+  private func probe(_ proxy: String, url target: String, expected: String) async throws -> Int {
+    let url = try encodedURL(segments: ["proxies", proxy, "delay"], query: [
+      URLQueryItem(name: "timeout", value: "2800"),
+      URLQueryItem(name: "url", value: target),
+      // Installed cores may ignore expected; verify the active route separately.
+    ])
     let data = try await request(url)
     let result = try JSONDecoder().decode(DelayResponse.self, from: data)
-    guard result.delay > 0, result.delay <= 2_800 else {
-      throw ControllerError.noHealthyNode
-    }
+    guard result.delay > 0, result.delay <= 2800 else { throw ControllerError.noHealthyNode }
     return result.delay
+  }
+
+  func verifyActiveRoute() async throws {
+    let configPath = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("io.github.clash-verge-rev.clash-verge-rev/config.yaml")
+    let config = try String(contentsOf: configPath, encoding: .utf8)
+    let line = config.components(separatedBy: .newlines).first { $0.hasPrefix("mixed-port:") }
+    guard let port = line.flatMap({ Int($0.dropFirst("mixed-port:".count).trimmingCharacters(in: .whitespaces)) }) else { throw ControllerError.invalidAddress }
+    let settings = URLSessionConfiguration.ephemeral
+    settings.connectionProxyDictionary = ["HTTPEnable": 1, "HTTPProxy": "127.0.0.1", "HTTPPort": port, "HTTPSEnable": 1, "HTTPSProxy": "127.0.0.1", "HTTPSPort": port]
+    let session = URLSession(configuration: settings)
+    defer { session.invalidateAndCancel() }
+    for (target, expected) in [("https://chatgpt.com/backend-api/models", 401), ("https://ws.chatgpt.com/", 404)] {
+      var req = URLRequest(url: URL(string: target)!)
+      req.timeoutInterval = 2.8
+      req.cachePolicy = .reloadIgnoringLocalCacheData
+      let (_, response) = try await session.data(for: req)
+      guard (response as? HTTPURLResponse)?.statusCode == expected else { throw ControllerError.noHealthyNode }
+    }
+  }
+
+  private struct Connections: Decodable {
+    struct Entry: Decodable {
+      struct Metadata: Decodable { let host: String? }
+      let id: String
+      let metadata: Metadata
+      let chains: [String]
+    }
+    let connections: [Entry]
   }
 
   func switchTo(_ proxy: String, in groupName: String) async throws {
     let url = try encodedURL(segments: ["proxies", groupName])
     _ = try await request(url, method: "PUT", jsonBody: ["name": proxy])
+    // Existing streams keep their old route. Close only related stale streams.
+    let data = try await request(try encodedURL(segments: ["connections"]))
+    let entries = try JSONDecoder().decode(Connections.self, from: data).connections
+    for entry in entries {
+      let host = (entry.metadata.host ?? "").lowercased()
+      let related = ["chatgpt.com", "openai.com"].contains { host == $0 || host.hasSuffix("." + $0) }
+      if related && entry.chains.contains(groupName) && !entry.chains.contains(proxy) {
+        _ = try await request(try encodedURL(segments: ["connections", entry.id]), method: "DELETE")
+      }
+    }
+
   }
 
   func refreshProviders() async throws -> Int {
@@ -532,7 +574,7 @@ final class ProxyMonitor: ObservableObject {
   private var samples: [Sample] = []
   private var availableNames: Set<String> = []
   private var scanTask: Task<Void, Never>?
-  private let historyURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("vpn_autochange/tests.jsonl")
+  private let historyURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("vpn_autochange/service-tests-v2.jsonl")
   var allPoolNodeNames: Set<String> { Set(pool.map(\.name)) }
 
   private func rebuildPool() {
@@ -589,6 +631,7 @@ final class ProxyMonitor: ObservableObject {
       let group = try await client.group()
       try await client.switchTo(name, in: group.name)
       currentNode = name
+      try await client.verifyActiveRoute()
       statusMessage = "已手动切换到 \(name)"
     } catch { statusMessage = error.localizedDescription }
   }
@@ -698,6 +741,7 @@ final class ProxyMonitor: ObservableObject {
       }
 
       currentNode = candidate.name
+      try await client.verifyActiveRoute()
       latency = candidate.delay
       consecutiveFailures = 0
       health = .healthy
@@ -732,6 +776,7 @@ final class ProxyMonitor: ObservableObject {
 
       do {
         let measuredDelay = try await client.delay(for: node)
+        try await client.verifyActiveRoute()
         recordSuccess(delay: measuredDelay)
         if hadFailure {
           hadFailure = false
@@ -800,6 +845,7 @@ final class ProxyMonitor: ObservableObject {
       )
       try await client.switchTo(candidate.name, in: groupName)
       currentNode = candidate.name
+      try await client.verifyActiveRoute()
       latency = candidate.delay
       consecutiveFailures = 0
       successfulChecks += 1
@@ -1100,10 +1146,11 @@ struct ContentView: View {
   private var stablePoolSummary: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack {
-        Text("长期稳定率前十 · 双击切换").font(.headline)
+        Text("双目标网络探测前十 · 双击切换").font(.headline)
         Spacer()
         Button("全量测试") { Task { await monitor.scanAll() } }.disabled(monitor.isScanning)
       }
+      Text("历史探测率不代表对话成功率；当前路径另做 HTTP 校验").font(.caption).foregroundStyle(.secondary)
       Text(monitor.scanStatus).font(.caption).foregroundStyle(.secondary)
       ForEach(monitor.pool) { node in
         HStack {
