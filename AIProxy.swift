@@ -560,7 +560,7 @@ final class ProxyMonitor: ObservableObject {
   @Published var lastHeartbeatSucceeded: Bool?
   @Published var reconnectRecords: [ReconnectRecord] = []
 
-  let failureThreshold = 1
+  let failureThreshold = 2
   let checkIntervalSeconds = 3
   struct Sample: Codable { let name: String; let date: Date; let delay: Int? }
   struct PoolNode: Identifiable {
@@ -1203,7 +1203,7 @@ struct ContentView: View {
         .padding(.leading, 2)
 
       FlowStep(
-        label: "失败 1 次",
+        label: "连续失败 \(monitor.failureThreshold) 次",
         detail: "只检测当前订阅中的 Codex 稳定节点",
         accent: .orange
       )
