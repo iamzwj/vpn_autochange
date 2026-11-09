@@ -575,19 +575,38 @@ final class ProxyMonitor: ObservableObject {
   private var availableNames: Set<String> = []
   private var scanTask: Task<Void, Never>?
   private let historyURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("vpn_autochange/service-tests-v2.jsonl")
-  var allPoolNodeNames: Set<String> { Set(pool.map(\.name)) }
+
+  struct VerifiedNode {
+    let name: String
+    let successes: Int
+    let total: Int
+  }
+
+  // Real Codex CLI requests completed on 2026-11-09 with gpt-6.1-sol.
+  static let verifiedNodes: [VerifiedNode] = [
+    VerifiedNode(name: "🇯🇵 日本标准 IEPL 专线 5", successes: 3, total: 3),
+    VerifiedNode(name: "🇯🇵 日本标准 IEPL 专线 2", successes: 2, total: 2),
+    VerifiedNode(name: "🇯🇵 日本标准 IEPL 专线 3", successes: 3, total: 3),
+    VerifiedNode(name: "🇺🇸 美国标准 IEPL 专线 2", successes: 3, total: 3),
+    VerifiedNode(name: "🇺🇸 美国标准 IEPL 专线 6", successes: 2, total: 2),
+    VerifiedNode(name: "🇺🇸 美国标准 IEPL 专线 8", successes: 3, total: 3),
+    VerifiedNode(name: "🇳🇱 荷兰标准 IEPL 专线 1", successes: 2, total: 2),
+    VerifiedNode(name: "🇳🇱 荷兰标准 IEPL 专线 2", successes: 3, total: 3),
+    VerifiedNode(name: "🇩🇪 德国标准 IEPL 专线 1", successes: 2, total: 2),
+    VerifiedNode(name: "🇭🇺 匈牙利标准 IEPL 专线 1", successes: 2, total: 2),
+  ]
 
   private func rebuildPool() {
-    pool = Dictionary(grouping: samples, by: \.name).compactMap { name, rows in
-      guard availableNames.contains(name) else { return nil }
-      let good = rows.compactMap(\.delay)
-      guard !good.isEmpty else { return nil }
-      return PoolNode(name: name, successes: good.count, total: rows.count, delay: rows.last?.delay)
-    }.sorted {
-      if $0.rate != $1.rate { return $0.rate > $1.rate }
-      if $0.total != $1.total { return $0.total > $1.total }
-      return ($0.delay ?? Int.max, $0.name) < ($1.delay ?? Int.max, $1.name)
-    }.prefix(10).map { $0 }
+    let latest = Dictionary(grouping: samples, by: \.name)
+    pool = Self.verifiedNodes.compactMap { node in
+      guard availableNames.contains(node.name) else { return nil }
+      return PoolNode(
+        name: node.name,
+        successes: node.successes,
+        total: node.total,
+        delay: latest[node.name]?.last?.delay
+      )
+    }
   }
 
   func scanAll() async {
@@ -872,7 +891,7 @@ final class ProxyMonitor: ObservableObject {
         succeeded: false
       )
       health = .warning
-      statusMessage = "前十节点暂不可用，等待全量检测更新"
+      statusMessage = "实测节点池暂不可用，等待下一轮检测"
 
     }
   }
@@ -954,8 +973,26 @@ final class ProxyMonitor: ObservableObject {
     excluding current: String?,
     client: MihomoClient
   ) async throws -> (name: String, delay: Int, isBackup: Bool) {
-    let best = try await bestCandidate(from: all, excluding: current, client: client, allowedNodeNames: allPoolNodeNames)
-    return (best.name, best.delay, false)
+    let tiers = [
+      Array(Self.verifiedNodes.prefix(3)),
+      Array(Self.verifiedNodes.dropFirst(3).prefix(3)),
+      Array(Self.verifiedNodes.dropFirst(6)),
+    ]
+    for (index, nodes) in tiers.enumerated() {
+      let names = Set(nodes.map(\.name))
+      do {
+        let best = try await bestCandidate(
+          from: all,
+          excluding: current,
+          client: client,
+          allowedNodeNames: names
+        )
+        return (best.name, best.delay, index > 0)
+      } catch ControllerError.noHealthyNode {
+        continue
+      }
+    }
+    throw ControllerError.noHealthyNode
   }
 
   private func requestNotificationPermission() {
@@ -1146,11 +1183,11 @@ struct ContentView: View {
   private var stablePoolSummary: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack {
-        Text("双目标网络探测前十 · 双击切换").font(.headline)
+        Text("Codex 实测节点池 · 双击切换").font(.headline)
         Spacer()
         Button("全量测试") { Task { await monitor.scanAll() } }.disabled(monitor.isScanning)
       }
-      Text("历史探测率不代表对话成功率；当前路径另做 HTTP 校验").font(.caption).foregroundStyle(.secondary)
+      Text("2026-11-09 · gpt-6.1-sol 短对话实测；右侧延迟为最近网络探测").font(.caption).foregroundStyle(.secondary)
       Text(monitor.scanStatus).font(.caption).foregroundStyle(.secondary)
       ForEach(monitor.pool) { node in
         HStack {
@@ -1215,7 +1252,7 @@ struct ContentView: View {
 
       FlowStep(
         label: "自动切节点",
-        detail: "优先切换到延迟最低的主池节点",
+        detail: "优先检测日本 5、2、3，再选当前可达的低延迟节点",
         accent: .blue
       )
 
@@ -1226,7 +1263,7 @@ struct ContentView: View {
 
       FlowStep(
         label: "主池全部失败",
-        detail: "启用二级备选池并选择最快可用节点",
+        detail: "依次检测美国 2、6、8，再检测其余实测节点",
         accent: .purple
       )
 
@@ -1236,8 +1273,8 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
 
       FlowStep(
-        label: "两级节点池全部失败",
-        detail: "重新拉取订阅；恢复后发送系统通知",
+        label: "实测节点池全部失败",
+        detail: "等待后续检测；节点恢复后重新尝试切换",
         accent: Color(red: 0.20, green: 0.82, blue: 0.48)
       )
     }

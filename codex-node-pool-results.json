@@ -1,0 +1,493 @@
+{
+  "original": "🇯🇵 日本标准 IEPL 专线 3",
+  "group": "Proxies",
+  "model": "gpt-6.1-sol",
+  "elapsed": 300.1,
+  "results": [
+    {
+      "node": "🇯🇵 日本标准 IEPL 专线 3",
+      "seconds": 8.09,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chat.openai.com",
+        "chatgpt.com",
+        "ws.chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇯🇵 日本标准 IEPL 专线 5",
+      "seconds": 8.61,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇺🇸 美国标准 IEPL 专线 2",
+      "seconds": 11.15,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇺🇸 美国标准 IEPL 专线 8",
+      "seconds": 14.18,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇳🇱 荷兰标准 IEPL 专线 2",
+      "seconds": 13.69,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇩🇪 德国标准 IEPL 专线 1",
+      "seconds": 14.69,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇺🇸 美国标准 IEPL 专线 6",
+      "seconds": 12.14,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇭🇺 匈牙利标准 IEPL 专线 1",
+      "seconds": 14.7,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇳🇱 荷兰标准 IEPL 专线 1",
+      "seconds": 12.18,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇯🇵 日本标准 IEPL 专线 2",
+      "seconds": 7.63,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com",
+        "ws.chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇯🇵 日本标准 IEPL 专线 3",
+      "seconds": 9.11,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chat.openai.com",
+        "chatgpt.com",
+        "ws.chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇯🇵 日本标准 IEPL 专线 5",
+      "seconds": 7.6,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇺🇸 美国标准 IEPL 专线 2",
+      "seconds": 11.14,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇺🇸 美国标准 IEPL 专线 8",
+      "seconds": 13.17,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇳🇱 荷兰标准 IEPL 专线 2",
+      "seconds": 15.17,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇩🇪 德国标准 IEPL 专线 1",
+      "seconds": 15.21,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇺🇸 美国标准 IEPL 专线 6",
+      "seconds": 13.18,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇭🇺 匈牙利标准 IEPL 专线 1",
+      "seconds": 15.72,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇳🇱 荷兰标准 IEPL 专线 1",
+      "seconds": 14.25,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇯🇵 日本标准 IEPL 专线 2",
+      "seconds": 8.66,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com",
+        "ws.chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇯🇵 日本标准 IEPL 专线 3",
+      "seconds": 8.09,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chat.openai.com",
+        "chatgpt.com",
+        "ws.chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇯🇵 日本标准 IEPL 专线 5",
+      "seconds": 7.59,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇺🇸 美国标准 IEPL 专线 2",
+      "seconds": 12.16,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇺🇸 美国标准 IEPL 专线 8",
+      "seconds": 11.14,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    },
+    {
+      "node": "🇳🇱 荷兰标准 IEPL 专线 2",
+      "seconds": 13.15,
+      "reply_ok": true,
+      "completed": true,
+      "exit": 0,
+      "timeout": false,
+      "route_observed": true,
+      "hosts": [
+        "ab.chatgpt.com",
+        "chatgpt.com"
+      ],
+      "event_types": [
+        "item.completed",
+        "thread.started",
+        "turn.completed",
+        "turn.started"
+      ]
+    }
+  ],
+  "tested_at": "2026-11-09",
+  "method": "Codex CLI authenticated short replies; HTTP proxy through Mihomo; not a long-running desktop session test"
+}
